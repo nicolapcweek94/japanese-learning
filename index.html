@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <title>Giapponese</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { h, render, Component } from 'https://esm.sh/preact';
+    import { html } from 'https://esm.sh/htm/preact';
+
+    class App extends Component {
+      state = {
+        tables: [],
+        tableRows: [],
+        currentQuestion: [],
+        answerShown: false,
+      };
+
+      handleFileUpload = async (event) => {
+        const file = event.target.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await response.json();
+        this.setState({ tables: data.tables });
+      };
+
+      handleTableSelect = async (event) => {
+        const tableName = event.target.value;
+        const table = this.state.tables.find((table) => table.name === tableName);
+        this.state.tableRows = JSON.parse(JSON.stringify(table.rows));
+        const randomIndex = Math.floor(Math.random() * this.state.tableRows.length);
+        const splicedRow = this.state.tableRows.splice(randomIndex, 1)[0];
+        this.state.currentQuestion = splicedRow.map((cell) => {
+          if (!cell || cell === '') {
+            cell = '<cella vuota>';
+          }
+
+          return cell;
+        });
+        this.forceUpdate();
+      };
+
+      showAnswer = async (event) => {
+        this.state.answerShown = true;
+        this.forceUpdate();
+      };
+
+      nextQuestion = async (event) => {
+        this.state.answerShown = false;
+        if (this.state.tableRows.length == 0) {
+          alert('Tabella finita! Cambia la tabella selezionata.');
+          this.state.answerShown = false;
+          this.state.currentQuestion = [];
+        } else {
+          this.state.currentQuestion = this.state.tableRows.splice(Math.floor(Math.random() * this.state.tableRows.length), 1)[0].map((cell) => {
+            if (!cell || cell === '') {
+              cell = '<cella vuota>';
+            }
+
+            return cell;
+          });
+        }
+        this.forceUpdate();
+      };
+
+      render() {
+        return html`
+          <div class="flex flex-col text-center">
+            <input class="flex-1" type="file" onChange=${this.handleFileUpload}>Apri file</input>
+            <select class="flex-1" onChange=${this.handleTableSelect}>
+              ${this.state.tables.map((table) => html`<option value=${table.name}>${table.name}</option>`)}
+            </select>
+            ${this.state.currentQuestion.length != 0 && html`
+              <p class="m-5 flex-1">${this.state.currentQuestion[0]}</p>
+              <button class="px-4 py-2 font-semibold text-sm bg-amber-800 text-white rounded-lg shadow-sm flex-1" onClick=${this.showAnswer}>Risposta?</button>
+              ${this.state.answerShown === true && html`
+                <p class="m-5 flex-1">${this.state.currentQuestion[1]}</p>
+                <p class="m-5 flex-1">${this.state.currentQuestion[2]}</p>
+                <p class="m-5 flex-1">${this.state.currentQuestion[3]}</p>
+                <button class="px-4 py-2 font-semibold text-sm bg-amber-800 text-white rounded-lg shadow-sm flex-1" onClick=${this.nextQuestion}>Prossima!</button>
+              `}
+            `}
+          </div>
+          `;
+      }
+    }
+
+    render(html`<${App} />`, document.body);
+  </script>
+</body>
+
+</html>
